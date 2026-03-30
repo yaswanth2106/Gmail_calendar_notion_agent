@@ -1,9 +1,5 @@
-"""Logging utility."""
-
 import logging
 import sys
-
-
 def get_logger(name: str = "productivity_agent") -> logging.Logger:
     logger = logging.getLogger(name)
     if not logger.handlers:

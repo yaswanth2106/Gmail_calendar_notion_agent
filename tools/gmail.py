@@ -1,19 +1,7 @@
-"""
-Gmail MCP Tool — reads recent emails from Gmail.
-
-Requires OAuth2 credentials:
-  1. Create a Google Cloud project
-  2. Enable the Gmail API
-  3. Download OAuth credentials → credentials/gmail_credentials.json
-  4. First run triggers browser-based auth flow → saves token
-"""
-
 from __future__ import annotations
-
 import base64
 import os
 from typing import Any
-
 from mcp_layer.protocol import (
     MCPTool,
     MCPToolSchema,
@@ -23,11 +11,7 @@ from mcp_layer.protocol import (
 )
 from models.email import EmailMessage
 from config import config
-
-
 class GmailReadTool(MCPTool):
-    """Read recent emails from Gmail inbox."""
-
     def schema(self) -> MCPToolSchema:
         return MCPToolSchema(
             name="gmail_read_emails",
@@ -49,11 +33,9 @@ class GmailReadTool(MCPTool):
                 ),
             ],
         )
-
     def execute(self, **kwargs) -> MCPToolResult:
         max_results = int(kwargs.get("max_results", config.gmail.max_emails))
         query = kwargs.get("query", "is:unread")
-
         try:
             service = self._get_gmail_service()
             results = (
@@ -63,10 +45,8 @@ class GmailReadTool(MCPTool):
                 .execute()
             )
             messages = results.get("messages", [])
-
             if not messages:
                 return MCPToolResult(success=True, data="No emails found matching the query.")
-
             emails: list[dict] = []
             for msg_ref in messages:
                 msg = (
@@ -77,9 +57,7 @@ class GmailReadTool(MCPTool):
                 )
                 email = self._parse_message(msg)
                 emails.append(email.model_dump())
-
             return MCPToolResult(success=True, data=emails)
-
         except FileNotFoundError:
             return MCPToolResult(
                 success=False,
@@ -88,26 +66,18 @@ class GmailReadTool(MCPTool):
             )
         except Exception as e:
             return MCPToolResult(success=False, error=str(e))
-
-    # ── Internal helpers ─────────────────────────────
-
     def _get_gmail_service(self) -> Any:
-        """Build and return an authenticated Gmail API service."""
         from google.auth.transport.requests import Request
         from google.oauth2.credentials import Credentials
         from google_auth_oauthlib.flow import InstalledAppFlow
         from googleapiclient.discovery import build
-
         creds = None
         token_path = config.gmail.token_file
         creds_path = config.gmail.credentials_file
-
         if not os.path.exists(creds_path):
             raise FileNotFoundError(creds_path)
-
         if os.path.exists(token_path):
             creds = Credentials.from_authorized_user_file(token_path, config.gmail.scopes)
-
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
@@ -116,15 +86,10 @@ class GmailReadTool(MCPTool):
                 creds = flow.run_local_server(port=0)
             with open(token_path, "w") as f:
                 f.write(creds.to_json())
-
         return build("gmail", "v1", credentials=creds)
-
     @staticmethod
     def _parse_message(msg: dict) -> EmailMessage:
-        """Parse a raw Gmail API message into our EmailMessage model."""
         headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
-
-        # Extract body
         body = ""
         payload = msg.get("payload", {})
         if "parts" in payload:
@@ -137,7 +102,6 @@ class GmailReadTool(MCPTool):
             data = payload["body"].get("data", "")
             if data:
                 body = base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
-
         return EmailMessage(
             id=msg.get("id", ""),
             subject=headers.get("subject", "(no subject)"),
@@ -145,6 +109,6 @@ class GmailReadTool(MCPTool):
             to=headers.get("to", ""),
             date=headers.get("date", ""),
             snippet=msg.get("snippet", ""),
-            body=body[:2000],  # Cap body length
+            body=body[:2000],
             labels=msg.get("labelIds", []),
         )
