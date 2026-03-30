@@ -94,36 +94,22 @@ class ExecutorNode:
                     "detail": decision.get("reason", "Not actionable"),
                 })
                 continue
-            if action == "create_task":
-                log.info(f"📝 Creating task for: {email_subject}")
-                result = self.mcp.call(
-                    "notion_create_task",
-                    title=details.get("title", email_subject),
-                    description=details.get("description", ""),
-                    priority=details.get("priority", "medium"),
-                    due_date=details.get("due_date", ""),
+            if action in ("create_task", "schedule_event"):
+                log.info(f"🤖 ReAct Engine taking over to execute {action} for: {email_subject}")
+                task_prompt = (
+                    f"Email Subject: '{email_subject}'.\n"
+                    f"The planner decided the action is: {action}.\n"
+                    f"Here are the necessary details to execute: {json.dumps(details)}.\n"
+                    f"Please use your tools to complete this action and provide a final answer summary."
                 )
+                
+                react_result = self.react.run(task_prompt)
+                
                 results.append({
                     "email_subject": email_subject,
-                    "action": "create_task",
-                    "success": result.success,
-                    "detail": str(result.data) if result.success else result.error,
-                })
-            elif action == "schedule_event":
-                log.info(f"📅 Scheduling event for: {email_subject}")
-                result = self.mcp.call(
-                    "calendar_create_event",
-                    title=details.get("title", email_subject),
-                    description=details.get("description", ""),
-                    start_datetime=details.get("start_datetime", ""),
-                    end_datetime=details.get("end_datetime", ""),
-                    location=details.get("location", ""),
-                )
-                results.append({
-                    "email_subject": email_subject,
-                    "action": "schedule_event",
-                    "success": result.success,
-                    "detail": str(result.data) if result.success else result.error,
+                    "action": action,
+                    "success": react_result.get("success", False),
+                    "detail": react_result.get("final_answer", "No final answer from ReAct agent."),
                 })
         return {"results": results}
 class SummarizerNode:
