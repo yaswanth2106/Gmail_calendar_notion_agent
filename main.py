@@ -49,46 +49,9 @@ def run_full_pipeline() -> None:
     }
     final_state = graph.invoke(initial_state)
     print(f"\n{final_state.get('summary', '(no summary)')}")
-def run_demo_mode() -> None:
-    log.info("🎭 Starting in DEMO MODE (mock emails, no API calls)")
-    log.info(f"   LLM: Ollama ({config.ollama.model}) @ {config.ollama.base_url}")
-    from agent.nodes import PlannerNode, SummarizerNode, AgentState
-    planner = PlannerNode()
-    state: AgentState = AgentState({
-        "emails": MOCK_EMAILS,
-        "decisions": [],
-        "results": [],
-        "summary": "",
-    })
-    log.info(f"\n📩 Loaded {len(MOCK_EMAILS)} mock email(s)")
-    state = planner(state)
-    print("\n" + "=" * 55)
-    print("  📊 Demo Results — Planner Decisions")
-    print("=" * 55)
-    for d in state.get("decisions", []):
-        action = d.get("action", "?")
-        icon = {"create_task": "📝", "schedule_event": "📅", "ignore": "⏭"}.get(action, "•")
-        print(f"\n  {icon} {d.get('email_subject', '?')}")
-        print(f"     Action: {action}")
-        print(f"     Reason: {d.get('reason', 'N/A')[:150]}")
-        details = d.get("details", {})
-        if details:
-            for k, v in details.items():
-                print(f"     {k}: {v}")
-    state["results"] = [
-        {
-            "email_subject": d.get("email_subject", "?"),
-            "action": d.get("action", "ignore"),
-            "success": True,
-            "detail": f"(demo) {d.get('reason', '')[:100]}",
-        }
-        for d in state.get("decisions", [])
-    ]
-    summarizer = SummarizerNode()
-    state = summarizer(state)
 def main() -> None:
     if "--demo" in sys.argv:
-        run_demo_mode()
+        pass
     else:
         run_full_pipeline()
 if __name__ == "__main__":
