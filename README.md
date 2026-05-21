@@ -24,23 +24,23 @@ graph TD
     classDef process fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87
     classDef decision fill:#fef08a,stroke:#eab308,stroke-width:2px,color:#713f12
 
-    Start([Start Pipeline]) --> InitMCP[Initialize MCPClient<br/>& Register Tools]
+    Start([Start Pipeline]) --> InitMCP[Initialize MCPClient<br/>and Register Tools]
     InitMCP --> CompileGraph[Compile StateGraph]
     CompileGraph --> NodeRead[Node 1: read_emails<br/>Calls MCP 'gmail_read_emails']
     
-    subgraph LangGraph Orchestrator
+    subgraph LangGraphOrchestrator ["LangGraph Orchestrator"]
         NodeRead --> NodePlan[Node 2: planner<br/>Ollama analyzes each email]
         NodePlan --> NodeExec[Node 3: executor<br/>Handles actions sequentially]
         NodeExec --> NodeSumm[Node 4: summarizer<br/>Creates status report]
     end
 
-    subgraph Executor Processing Logic
+    subgraph ExecutorProcessing ["Executor Processing Logic"]
         NodeExec --> ForEach{For Each Email Decision}
         ForEach -->|ignore| LogIgnore[Log skip & record Ignore result]
         ForEach -->|create_task / schedule_event| InitReAct[Initialize ReActEngine]
         
-        subgraph ReAct Execution Loop (Max 8 Steps)
-            InitReAct --> PromptLLM[Prompt LLM with history & tools]
+        subgraph ReActLoop ["ReAct Execution Loop (Max 8 Steps)"]
+            InitReAct --> PromptLLM[Prompt LLM with history and tools]
             PromptLLM --> CheckResponse{Response Type?}
             CheckResponse -->|Action: Call Tool| CallMCP[Call MCP Tool via client]
             CallMCP --> FeedHistory[Record tool observation in history]
